@@ -49,19 +49,9 @@ contract LMSRMarket is ReentrancyGuard {
                                 EVENTS
     //////////////////////////////////////////////////////////////*/
 
-    event SharesPurchased(
-        address indexed buyer,
-        uint256 indexed outcome,
-        uint256 amount,
-        uint256 usdcCost
-    );
+    event SharesPurchased(address indexed buyer, uint256 indexed outcome, uint256 amount, uint256 usdcCost);
 
-    event SharesSold(
-        address indexed seller,
-        uint256 indexed outcome,
-        uint256 amount,
-        uint256 usdcPayout
-    );
+    event SharesSold(address indexed seller, uint256 indexed outcome, uint256 amount, uint256 usdcPayout);
 
     event MarketResolved(uint256 indexed outcome);
 
@@ -92,10 +82,7 @@ contract LMSRMarket is ReentrancyGuard {
                             CORE FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function calculateCost(
-        uint256 outcome,
-        uint256 amount
-    ) public view returns (uint256 cost) {
+    function calculateCost(uint256 outcome, uint256 amount) public view returns (uint256 cost) {
         if (outcome >= numOutcomes) revert InvalidOutcome();
         if (amount < MIN_AMOUNT) revert AmountTooSmall();
 
@@ -143,12 +130,14 @@ contract LMSRMarket is ReentrancyGuard {
 
     function claimWinnings(uint256 amount) external nonReentrant {
         if (!resolved) revert MarketNotResolved();
-        if (userShares[msg.sender][winningOutcome] < amount)
+        if (userShares[msg.sender][winningOutcome] < amount) {
             revert InsufficientShares();
+        }
 
         uint256 usdcAmount = (amount * SCALE) / (10 ** (18 - USDC_DECIMALS));
-        if (usdcAmount > USDC.balanceOf(address(this)))
+        if (usdcAmount > USDC.balanceOf(address(this))) {
             revert InsufficientUSDC();
+        }
 
         userShares[msg.sender][winningOutcome] -= amount;
         quantities[winningOutcome] -= amount;
@@ -164,10 +153,7 @@ contract LMSRMarket is ReentrancyGuard {
                             VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function getUserPosition(
-        address user,
-        uint256 outcome
-    ) external view returns (uint256) {
+    function getUserPosition(address user, uint256 outcome) external view returns (uint256) {
         return userShares[user][outcome];
     }
 
@@ -175,9 +161,7 @@ contract LMSRMarket is ReentrancyGuard {
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function calculateLMSRCost(
-        uint256[] memory _quantities
-    ) internal view returns (uint256) {
+    function calculateLMSRCost(uint256[] memory _quantities) internal view returns (uint256) {
         uint256 sum = 0;
         for (uint256 i = 0; i < numOutcomes; i++) {
             sum += exp((_quantities[i] * SCALE) / liquidity);

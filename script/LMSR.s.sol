@@ -34,11 +34,7 @@ contract DeployLMSR is Script {
         }
 
         // Deploy LMSR Market
-        market = new LMSRMarket(
-            block.chainid == 31337 ? address(usdc) : getUSDCAddress(),
-            LIQUIDITY,
-            NUM_OUTCOMES
-        );
+        market = new LMSRMarket(block.chainid == 31337 ? address(usdc) : getUSDCAddress(), LIQUIDITY, NUM_OUTCOMES);
 
         console.log("Deployed LMSR Market at:", address(market));
         console.log("USDC address:", address(market.USDC()));

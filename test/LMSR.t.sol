@@ -36,7 +36,7 @@ contract LMSRMarketTest is Test {
         vm.stopPrank();
     }
 
-    function test_InitialState() public {
+    function test_InitialState() public view {
         assertEq(market.numOutcomes(), NUM_OUTCOMES);
         assertEq(market.liquidity(), LIQUIDITY);
         assertEq(address(market.USDC()), address(usdc));
@@ -85,8 +85,7 @@ contract LMSRMarketTest is Test {
         uint256 balanceBefore = usdc.balanceOf(alice);
         market.claimWinnings(amount);
 
-        uint256 expectedPayout = (amount * market.SCALE()) /
-            (10 ** (18 - market.USDC_DECIMALS()));
+        uint256 expectedPayout = (amount * market.SCALE()) / (10 ** (18 - market.USDC_DECIMALS()));
         assertEq(usdc.balanceOf(alice), balanceBefore + expectedPayout);
         assertEq(market.getUserPosition(alice, outcome), 0);
     }
