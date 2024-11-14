@@ -5,6 +5,8 @@ pragma solidity ^0.8.19;
 import {IERC20} from "@openzeppelin/token/ERC20/IERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/utils/ReentrancyGuard.sol";
 import {Math} from "@openzeppelin/utils/math/Math.sol";
+import { UD60x18, ud, unwrap, ln, exp, div, mul } from "@prb-math/UD60x18.sol";
+import { console } from "@forge-std/console.sol";
 
 interface IUSDC is IERC20 {
     function decimals() external view returns (uint8);
@@ -29,7 +31,7 @@ contract LMSRMarket is ReentrancyGuard {
 
     IUSDC public immutable USDC;
     uint8 public constant USDC_DECIMALS = 6;
-    uint256 public constant SCALE = 1e18;
+    uint256 public constant SCALE = 1e6;
     uint256 public constant MIN_AMOUNT = 1e6; // 1 USDC minimum
 
     /*//////////////////////////////////////////////////////////////
@@ -94,11 +96,12 @@ contract LMSRMarket is ReentrancyGuard {
         newQuantities[outcome] += amount;
 
         uint256 newCost = calculateLMSRCost(newQuantities);
-        uint256 currentCost = calculateLMSRCost(quantities);
-        cost = newCost > currentCost ? newCost - currentCost : 0;
+        console.log('newCost: ', newCost);
 
-        // Convert to USDC decimals
-        cost = cost / (10 ** (18 - USDC_DECIMALS));
+        uint256 currentCost = calculateLMSRCost(quantities);
+        console.log('currenCost: ', currentCost);
+
+        cost = newCost > currentCost ? newCost - currentCost : 0;
     }
 
     function buyShares(uint256 outcome, uint256 amount) external nonReentrant {
@@ -107,6 +110,7 @@ contract LMSRMarket is ReentrancyGuard {
         if (amount < MIN_AMOUNT) revert AmountTooSmall();
 
         uint256 cost = calculateCost(outcome, amount);
+        console.log(cost);
 
         bool success = USDC.transferFrom(msg.sender, address(this), cost);
         if (!success) revert TransferFailed();
@@ -161,20 +165,32 @@ contract LMSRMarket is ReentrancyGuard {
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function calculateLMSRCost(uint256[] memory _quantities) internal view returns (uint256) {
-        uint256 sum = 0;
+    function calculateLMSRCost(uint256[] memory _quantities) public view returns (uint256) {
+        require(_quantities.length == numOutcomes, "Quantities length mismatch");
+
+        UD60x18 sum = ud(0);
+
         for (uint256 i = 0; i < numOutcomes; i++) {
-            sum += exp((_quantities[i] * SCALE) / liquidity);
+            // Convert quantity to UD60x18, ensuring proper scaling
+            UD60x18 qi = ud(_quantities[i]);
+
+            // Calculate qi / b
+            UD60x18 qi_div_b = qi.div(ud(liquidity));
+
+            // Calculate exp(qi / b)
+            UD60x18 exp_qi_div_b = qi_div_b.exp();
+
+            // Sum up the exponentials
+            sum = sum.add(exp_qi_div_b);
         }
-        return liquidity * ln(sum);
-    }
 
-    // Replace with proper math library in production
-    function exp(uint256 x) internal pure returns (uint256) {
-        return x + SCALE;
-    }
+        // Calculate ln(sum)
+        UD60x18 ln_sum = sum.ln();
 
-    function ln(uint256 x) internal pure returns (uint256) {
-        return x - SCALE;
+        // Multiply by liquidity (b)
+        UD60x18 cost = ud(liquidity).mul(ln_sum);
+
+        // Return the cost as uint256 (unwrap the UD60x18)
+        return unwrap(cost);
     }
 }

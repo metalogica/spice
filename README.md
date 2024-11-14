@@ -11,6 +11,18 @@ Foundry consists of:
 
 ## Documentation
 
+## Core dev commands
+```bash
+# https://book.getfoundry.sh/projects/soldeer
+
+# install deps
+forge soldeer install forge-std~1.9.2 https://github.com/foundry-rs/forge-std.git
+forge remappings > remappings.txt
+
+# match test
+forge test --match-test test_BuyShares -vvv
+```
+
 https://book.getfoundry.sh/
 
 ## Usage
